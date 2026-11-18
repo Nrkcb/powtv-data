@@ -1,0 +1,50 @@
+# Met à jour sports.json chaque matin et le publie sur GitHub Pages.
+# Adresse publique : https://nrkcb.github.io/powtv-data/sports.json
+name: sports.json quotidien
+
+on:
+  schedule:
+    # 4 h UTC = 5 h à Paris en hiver (6 h en été). GitHub peut décaler de
+    # quelques minutes les tâches planifiées, sans conséquence ici.
+    - cron: "0 4 * * *"
+  workflow_dispatch: {}   # bouton « Run workflow » pour lancer à la main
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Construire sports.json
+        env:
+          FOOTBALL_DATA_KEY: ${{ secrets.FOOTBALL_DATA_KEY }}
+        run: python scripts/build_sports.py public
+      - name: Page d'accueil minimale
+        run: |
+          cp README.md public/README.md
+          printf '<!doctype html><meta charset="utf-8"><title>powtv-data</title><p>Données publiques du Sport Hub POWTV : <a href="sports.json">sports.json</a></p>' > public/index.html
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
