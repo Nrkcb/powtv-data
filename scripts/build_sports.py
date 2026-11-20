@@ -146,6 +146,44 @@ ALIASES = {
     "rsc anderlecht": ["anderlecht"],
     "fc red bull salzburg": ["salzburg", "salzbourg"],
     "gnk dinamo zagreb": ["dinamo zagreb"],
+}
+
+# Noms ÉTRANGERS des grands clubs : les guides de nombreux pays traduisent
+# (« Real Madryt », « Olympique Marsylia », « Bayern Monachium »). Ajoutés aux
+# alias ci-dessus, par nom normalisé de football-data.
+EXONYMS = {
+    "paris saint germain": ["paryz", "paris saint germain fc", "pariz", "paris sen zermen"],
+    "olympique de marseille": ["marsylia", "olympique marsylia", "marsilya", "marsej", "marseilles"],
+    "olympique lyonnais": ["lyon", "olympique lyon"],
+    "fc bayern munchen": ["bayern monachium", "bayern mnichov", "bayern munih", "bayern munchen fc", "fc bayern"],
+    "borussia dortmund": ["borussia dortmund", "dortmund bvb"],
+    "bayer 04 leverkusen": ["bayer leverkusen"],
+    "real madrid cf": ["real madryt", "real madrid cf"],
+    "club atletico de madrid": ["atletico madryt", "atletico madrid", "atletico"],
+    "fc barcelona": ["fc barcelona", "barcelona", "barca", "barsa", "barselona"],
+    "sevilla fc": ["sewilla", "sevilla"],
+    "valencia cf": ["walencja", "valencie"],
+    "fc internazionale milano": ["inter mediolan", "inter milano", "inter milan", "inter milao"],
+    "ac milan": ["ac milan", "milan"],
+    "juventus fc": ["juventus turyn", "juventus turin", "juventus torino"],
+    "ssc napoli": ["napoli", "neapol", "napoles"],
+    "as roma": ["as rzym", "as roma"],
+    "ss lazio": ["lazio rzym", "lazio roma"],
+    "acf fiorentina": ["fiorentina"],
+    "manchester united fc": ["manchester united", "man utd", "man united", "manchester utd"],
+    "manchester city fc": ["manchester city", "man city"],
+    "tottenham hotspur fc": ["tottenham hotspur", "tottenham"],
+    "sport lisboa e benfica": ["benfica lizbona", "benfica lisabon", "benfica lissabon", "sl benfica"],
+    "sporting clube de portugal": ["sporting lizbona", "sporting lissabon", "sporting lisabon"],
+    "fc porto": ["fc porto"],
+    "afc ajax": ["ajax amsterdam", "ajaks"],
+    "galatasaray sk": ["galatasaray"],
+    "fenerbahce sk": ["fenerbahce"],
+    "besiktas jk": ["besiktas"],
+    "club brugge kv": ["club brugge", "brugia", "bruggy"],
+    "fc red bull salzburg": ["rb salzburg", "red bull salzburg"],
+    "fk crvena zvezda": ["crvena zvezda", "crvena zvezda beograd", "czerwona gwiazda"],
+    "gnk dinamo zagreb": ["dinamo zagreb", "dynamo zagreb"],
     "fk crvena zvezda": ["crvena zvezda", "red star belgrade", "etoile rouge"],
     "fc shakhtar donetsk": ["shakhtar", "chakhtar"],
 }
@@ -262,13 +300,23 @@ def team_keywords(team):
     words = [w for w in stripped.split() if len(w) >= 5 and w not in TOO_GENERIC]
     if words and not any(c in ALIASES or c in NATIONS for c in (n_name, n_short, trimmed)):
         keys.append(words[0])
+    for candidate in (n_name, n_short, trimmed):
+        keys += EXONYMS.get(candidate, [])
+    # Abréviation « initiale + reste » des noms en deux mots ou plus, très
+    # courante dans les guides : « B. München », « M. City », « A. Madrid ».
+    # Jamais sur un nom d'un seul mot, ni quand l'initiale suffirait seule.
+    for candidate in list(keys):
+        mots = norm(candidate).split()
+        if len(mots) >= 2 and len(mots[0]) >= 4 and len(" ".join(mots[1:])) >= 4 and not mots[1].isdigit():
+            keys.append(mots[0][0] + " " + " ".join(mots[1:]))
     seen, out = set(), []
     for k in keys:
         k = norm(k)
         if k and k not in seen:
             seen.add(k)
             out.append(k)
-    return out[:8]
+    # 16 et non plus 8 : la limite coupait les noms étrangers et les abréviations.
+    return out[:16]
 
 
 def fetch_football(today):
